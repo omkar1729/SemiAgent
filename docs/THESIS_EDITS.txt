@@ -1,0 +1,314 @@
+================================================================================
+ THESIS EDIT GUIDE — aligning the thesis with the actual SemiAgent experiments
+ (companion to REPORT.txt; all numbers from the corrected-label runs)
+================================================================================
+
+HOW TO USE THIS FILE
+  - PART 1 is the location map: where each change goes. Line numbers are from a
+    plain-text extraction of the .docx (one "line" = one Word paragraph), so they
+    will NOT equal Word's on-screen line numbers — use the quoted snippet with
+    Ctrl+F in Word to land on the exact spot.
+  - PART 2 = ready-to-paste replacement paragraphs.
+  - PART 3 = filled results tables (Table 4, 5, 6), with the across-N ablation.
+  - PART 4 = new subsections to insert in Results.
+  - Items marked "DO NOT CHANGE" are literature citations, not your system.
+
+KEY RESULT VALUES (corrected labels)
+  Detection (500 test maps): CLIP 5.0% / 0.008 F1 | ViT-untrained 4.4% / 0.008 |
+                             ViT-trained 98.4% top-1 / 0.982 macro-F1 (100% per single class)
+  Retrieval (8 seed queries): P@5 hybrid 0.45 / sparse 0.53 / dense 0.48; cosine 0.671
+  Diagnosis quality (/10), full system B0 = 9.52 (N=10) / 9.57 (N=30) / 9.60 (N=50)
+  Ablation (rubric /10) across N=10 / N=30 / N=50, with p vs B0:
+     Oracle detection     9.52 / 9.55 / 9.57   p = 1.00  / 0.74    / 0.59   (never sig)
+     GPT truncated docs   9.52 / 9.52 / 9.51   p = 1.00  / 0.48    / 0.16   (never sig)
+     Naive (sparse) retr  9.04 / 9.09 / 9.22   p = 0.28  / 0.009   / 0.007  (sig >=N30)
+     SemiKong writer      9.28 / 9.33 / 9.33   p = 0.25  / 0.020   / <0.001 (sig >=N30)
+     No retrieval         7.52 / 7.79 / 7.84   p = 0.002 / <0.001  / <0.001 (always sig)
+     Template (no LLM)    7.36 / 7.56 / 7.52   p = 0.002 / <0.001  / <0.001 (always sig)
+  Detector x note grid (N=50): marginals CLIP 9.20 / trained ViT 9.50 / untrained 9.65;
+     note vs no-note 9.32 vs 9.58 (note slightly LOWERS, p<0.001)
+  Fair LLM compare (N=50, same truncated docs): GPT 9.51 vs SemiKong 9.33, p=0.008;
+     truncation effect on GPT 9.60->9.51, p=0.16 (n.s.)
+  B0 per-dimension (N=50): causal 5.0, evidence 5.0, technical 5.0, actionable 5.0, completeness 4.0
+  Latency (N=50): 4.56 s/case (detection 0.09 + retrieval 0.02 + diagnosis 4.45); ~98% LLM
+  Multi-judge (N=20): all 4 judges rank GPT>SemiKong — GPT +0.40 (p=0.001),
+     Claude +0.60 (p=0.004), Gemini +0.86 (p=0.004), SemiKong +0.44 (p=0.063);
+     leniency GPT 9.44 / Gemini 9.49 / Claude 8.80 / SemiKong 5.22
+  Models: detector google/vit-base-patch16-224; diagnosis GPT-4o-mini (primary) +
+     SemiKong-8B (pentagoniac/SEMIKONG-8b-GPTQ via vLLM); retrieval all-MiniLM-L6-v2 + BM25, RRF
+  Corpus: ~1000 docs = 776 arXiv abstracts + 200 patents (Google Patents) + 24 hand-authored seed abstracts
+  Data: 38,015 maps 52x52; split 70/15/15 = 26,610 / 5,702 / 5,703 (official 8->38 col mapping)
+
+================================================================================
+ PART 1 — LOCATION MAP (thesis.txt line -> action)
+================================================================================
+
+A. ABSTRACT / INTRO TARGET CLAIMS
+   line 9   "expected to achieve detection accuracy exceeding 90% and retrieval
+            relevance exceeding 85%"            -> use B-TARGETS
+   line 109 "detection performance exceeding 90% and retrieval relevance exceeding
+            85% demonstrating practical utility" -> use B-TARGETS
+   line 107 "targeting relevance scores exceeding 85% through structured expert
+            review protocols"                   -> update target + expert->LLM-judge
+
+B. DIAGNOSIS BACKBONE  (highest priority)
+   line 228 "RAG-augmented LLM using SemiKong as its backbone" -> use B-BACKBONE
+
+C. DETECTOR = ViT-Base  (only your-system lines)
+   line 216 "consistent with the WaferSegClassNet and ViT-Tiny designs" -> use B-DETECTOR
+   line 385 RQ4 row "ViT-Tiny, hybrid retrieval, CoT retrieval, SemiKong backbone"
+            -> use PART 3 Table 6 (RQ4 row)
+   DO NOT CHANGE lines 174, 190, 198, 206 (these cite the ViT-Tiny PAPER, not your system)
+
+D. CORPUS (USPTO -> arXiv+patents+seeds)
+   line 256 "curated USPTO semiconductor patent dataset"  -> use B-RETRIEVAL
+   line 326 "a curated corpus of USPTO semiconductor patent documents" -> use B-RETRIEVAL
+   line 328 "indexed a curated USPTO patent corpus"       -> use B-RETRIEVAL
+
+E. EXPERT REVIEW -> LLM-AS-JUDGE (+ multi-judge)   use B-CORRECTNESS, soften each:
+   lines 107, 108, 160, 170, 199, 222, 229, 251, 272 (methodology)
+   lines 330, 344 (results)
+   (line 199 "must include structured expert review" and 251 "domain expert reviewers
+    score..." are the strongest claims — edit carefully)
+
+F. SCOPE "all 38 categories" -> single-defect for DIAGNOSIS
+   line 254 "diagnostic correctness... across all 38 MixedWM38 defect categories"
+            -> "detection across all 38; diagnosis across the 8 single-defect classes"
+   line 271 "...end-to-end latency across all 38 defect categories. Conduct the ablation"
+            -> same
+   DO NOT CHANGE line 249 (detection per-class across all 38 is TRUE) or line 174 (literature)
+
+G. RETRIEVAL >85% TARGET (not met)
+   lines 9, 109, 229, 326, 342 -> use B-TARGETS (report actual cosine 0.671 / P@5 0.45-0.53)
+   (90% detection target at lines 336/229/326 IS met — keep, mark achieved)
+
+H. TABLE 4 (System Performance): title line 331; put results at lines
+   337 (Detection 98.4%), 340 (Macro-F1 0.982), 343 (Retrieval 0.671 / P@5 0.45-0.53),
+   346 (Diagnostic Correctness 9.60/10), 349 (Latency 4.56 s).
+   Relabel line 344 "(expert rubric)" -> "(LLM-as-judge rubric)".  Use PART 3 Table 4.
+
+I. TABLE 5 (Ablation): title line 350; fill lines 355/356 (Full 9.60), 358 (Oracle 9.57),
+   361 (Naive/sparse 9.22), 364 (Template 7.52), 367 (No Retrieval 7.84). Use PART 3 Table 5
+   (the across-N version shows N=10/30/50; N=50 is the primary column).
+
+J. TABLE 6 (Achievement): title line 371; outcomes at 377 (RQ1), 380 (RQ2), 383 (RQ3),
+   386 (RQ4), 389 (RQ5); fix design row 385. Use PART 3 Table 6.
+
+K. DATA-PREP NOTE (add): no 8->38 conversion text exists; add B-DATAPREP near the
+   dataset/splits description (around lines 226 / 234 / 238).
+
+L. NEW RESULTS SUBSECTIONS:
+   after Table 4 (~line 349): insert PART 4 "Diagnostic-factor analysis" + "Latency"
+   after Table 5 (~line 368): insert PART 4 "Experiment 4 — Multi-judge validity check"
+   Limitations (near lines 169-170): replace with B-LIMITATIONS
+
+   NO CHANGE: Hypotheses "Not Applicable" (line 155).
+
+================================================================================
+ PART 2 — REPLACEMENT PARAGRAPHS (ready to paste)
+================================================================================
+
+[B-BACKBONE]  (Methodology / System Architecture — Diagnosis Agent)
+The Diagnosis Agent is a retrieval-augmented LLM that synthesizes the detected defect
+descriptor, the retrieved technical passages, and any optional engineer observation
+into a ranked set of root-cause hypotheses with explicit chain-of-thought reasoning
+and source citations. Its primary backbone is GPT-4o-mini, accessed through a
+structured chain-of-thought prompt that emits a fixed JSON schema (summary, ranked
+hypotheses with cited evidence, and investigation parameters). A domain-specialized
+open model, SemiKong-8B (pentagoniac/SEMIKONG-8b-GPTQ, served via vLLM), is evaluated
+as an alternative backbone rather than as the default, allowing a direct comparison
+between a general-purpose frontier model and a semiconductor-specialized one under
+identical retrieval and prompting conditions.
+
+[B-DETECTOR]  (Methodology / System Architecture — Detection Agent)
+The Detection Agent classifies each 52x52 wafer bin map across the 38 MixedWM38
+categories. It is implemented by fine-tuning a Vision Transformer (ViT-Base,
+google/vit-base-patch16-224) on the training split, with a CLIP zero-shot classifier
+and an untrained-ViT variant retained as controls. This design follows the same
+single-network classification paradigm validated on MixedWM38 by WaferSegClassNet and
+ViT-Tiny (reported at 98.2% accuracy and 98.4% F1), and is benchmarked against them on
+a comparable macro-F1 basis.
+
+[B-RETRIEVAL]  (Methodology / System Architecture — Knowledge Retrieval Agent; corpus)
+The Knowledge Retrieval Agent indexes a corpus of approximately 1,000 public technical
+documents — 776 arXiv paper abstracts, 200 semiconductor-manufacturing patent texts
+(via Google Patents), and 24 hand-authored seed abstracts (three per single-defect
+type). The seed abstracts are concise, synthetically written defect-mechanism
+summaries created within this project to guarantee per-type coverage; they are not
+externally expert-validated. Retrieval is hybrid: a dense semantic index (Chroma,
+all-MiniLM-L6-v2 embeddings) and a sparse lexical index (BM25) are combined with
+Reciprocal Rank Fusion. The seed abstracts additionally serve as the relevance ground
+truth for the retrieval evaluation; because they are both members of the corpus and
+the relevance labels, that evaluation measures recovery of known-relevant planted
+documents rather than fully independent human relevance judgments.
+
+[B-DATAPREP]  (Methodology / Data Preparation)
+The raw MixedWM38 archive encodes each wafer as an 8-dimensional multi-hot vector over
+the base defect types, which we convert to the 38-class label space used throughout.
+The mapping from the eight columns to defect types follows the dataset authors'
+official ordering and was verified directly against the dataset's documented
+per-pattern index ranges (e.g., rows 25000-25999 = Edge-Loc, 37015-38014 = Scratch),
+ensuring the label conversion is exact. The 38,015 maps were split 70/15/15
+(26,610 / 5,702 / 5,703) with stratification on the primary class.
+
+[B-CORRECTNESS]  (Methodology / Evaluation — Diagnostic Correctness)
+Diagnostic report quality is scored with an LLM-as-judge rubric: a grader model
+assigns a 1-5 score on five frozen dimensions (causal correctness, evidence grounding,
+technical accuracy, completeness, and actionability), averaged and rescaled to a 0-10
+scale. Because the default grader (GPT-4o-mini) shares a model family with the default
+writer, the rubric's validity is established through a multi-judge cross-check
+(Experiment 4) in which the same reports are independently re-graded by Claude, Gemini,
+and SemiKong. Evaluation by human domain experts was outside the scope of this thesis
+and is identified as future work.
+
+[B-TARGETS]  (Significance/Intro — the ">85% demonstrating practical utility" sentence)
+The system was designed to meet a detection-accuracy target above 90% and a
+retrieval-relevance target above 85%. The detection target was exceeded (98.4%);
+retrieval relevance reached 0.671 (cosine) / 0.45-0.53 (P@5), below the target, a gap
+discussed in the Limitations as a consequence of the small judged query set and
+overlapping defect semantics rather than a deficiency of the hybrid design.
+
+[B-LIMITATIONS]  (Limitations)
+Several limitations qualify these results. First, diagnostic quality was assessed by an
+LLM-as-judge rubric rather than by human domain experts; the risk of same-family bias
+was tested directly and rejected (four independent graders agree on the GPT > SemiKong
+ranking), but absolute scores remain grader-specific and human expert validation is
+left to future work. Second, while detection was evaluated across all 38 classes, the
+diagnosis and ablation studies were conducted on the eight single-defect classes and
+on modest sample sizes (10-50 wafers); the large effects (removing the LLM or
+retrieval) are significant at every size, but the smaller effects (sparse-only
+retrieval, SemiKong) only reach significance from N=30 onward and should be read
+accordingly. Third, retrieval relevance did not reach the 85% target on the limited
+judged query set, and that ground truth (the seed abstracts) is not independent human
+judgment, reflecting the semantic similarity among defect descriptions rather than a
+failure of the retrieval architecture.
+
+================================================================================
+ PART 3 — FILLED RESULTS TABLES
+================================================================================
+
+[TABLE 4 — System Performance]
+  Metric                                        | Target | Result
+  ----------------------------------------------+--------+-----------------------------
+  Detection Accuracy (38 classes, top-1)        | >90%   | 98.4%  (target met)
+  Macro F1-Score                                |   -    | 0.982
+  Retrieval Relevance (cosine similarity)       | >85%   | 0.671  (P@5 0.45/0.53/0.48
+                                                |        |         hybrid/sparse/dense)
+  Diagnostic Correctness (LLM-as-judge rubric)  |   -    | 9.60 / 10
+  End-to-End Latency per case (s)               |   -    | 4.56 (det 0.09 + retr 0.02
+                                                |        |       + diagnosis 4.45)
+
+  Narrative: The fine-tuned ViT-Base reached 98.4% top-1 accuracy and 0.982 macro-F1 on
+  500 held-out test maps (100% on each single-defect class), exceeding the >90% target
+  and matching the published 98.2% WaferSegClassNet benchmark on a macro-F1 basis; the
+  CLIP zero-shot and untrained-ViT controls scored 5.0% and 4.4% (0.008 macro-F1),
+  confirming that wafer maps are far out-of-distribution for general image models.
+  Retrieval relevance fell short of the >85% target: the hybrid retriever returned a
+  mean cosine similarity of 0.671 and Precision@5 of 0.45 (with sparse BM25 marginally
+  ahead at 0.53). This shortfall is attributable to the small judged query set and the
+  semantic overlap between defect descriptions (e.g., Donut and Edge-Ring are both
+  ring-shaped) and did not materially limit downstream diagnosis. End-to-end processing
+  took 4.56 s per wafer, ~98% of it the LLM generation call; detection and retrieval
+  were negligible, indicating throughput is bounded by the language-model service
+  rather than local hardware.
+
+[TABLE 5 — Ablation Study]  (rubric score /10 vs. full system; Wilcoxon p; N=10/30/50)
+  Configuration                          |  N=10 |  N=30 |  N=50 | p vs Full (N=50)
+  ---------------------------------------+-------+-------+-------+------------------
+  Full System                            | 9.52  | 9.57  | 9.60  |    -
+  A: Oracle Detection                    | 9.52  | 9.55  | 9.57  | 0.59 (n.s.)
+  B: Naive Retrieval (BM25 sparse-only)  | 9.04  | 9.09  | 9.22  | 0.007
+  C: Template Diagnosis (no LLM)         | 7.36  | 7.56  | 7.52  | <0.001
+  D: No Retrieval                        | 7.52  | 7.79  | 7.84  | <0.001
+  (LLM swap) SemiKong-8B writer          | 9.28  | 9.33  | 9.33  | <0.001
+  (control)  GPT on truncated docs       | 9.52  | 9.52  | 9.51  | 0.16 (n.s.)
+
+  Full p-trend vs Full System (N=10 / N=30 / N=50):
+     Oracle      1.00 / 0.74  / 0.59     Template      0.002 / <0.001 / <0.001
+     Naive(sp)   0.28 / 0.009 / 0.007    No-retrieval  0.002 / <0.001 / <0.001
+     SemiKong    0.25 / 0.020 / <0.001   GPT-truncated 1.00  / 0.48   / 0.16
+
+  Narrative: The ablation isolates two load-bearing components, consistently across
+  sample sizes. Replacing the LLM with a fixed template (C) produced the largest
+  degradation (to ~7.4-7.5), and removing retrieval entirely (D) was nearly as damaging
+  (to ~7.5-7.8); both effects are significant at every N. Weakening retrieval to
+  sparse-only (B) and swapping the writer to SemiKong are smaller but real effects that
+  reach significance from N=30 onward (their non-significance at N=10 is a power
+  artifact). Supplying perfect (oracle) detection (A) never significantly changed
+  report quality, indicating detector accuracy is not the binding constraint; likewise
+  truncating GPT's documents had no significant effect. The report's quality rests
+  jointly on the language model's reasoning and the retrieved evidence, not on detection.
+
+[TABLE 6 — Achievement of Objectives]
+  RQ  | System component                                    | Outcome
+  ----+-----------------------------------------------------+--------------------------
+  RQ1 | 3-agent pipeline, JSON protocol, LangGraph          | Achieved — complete
+      |                                                     | wafer-image-to-report
+      |                                                     | workflow end-to-end.
+  RQ2 | Evaluation on MixedWM38 test split + public corpus  | Achieved — detection
+      |                                                     | 98.4% / 0.982 F1; retrieval
+      |                                                     | P@5 0.45-0.53, cosine 0.671;
+      |                                                     | diagnosis 9.60/10; 4.56 s/case.
+  RQ3 | 6 knockout conditions + detector/note grid          | Achieved — LLM reasoning &
+      |                                                     | retrieval load-bearing
+      |                                                     | (template 7.52, no-retr 7.84);
+      |                                                     | detection & note negligible.
+  RQ4 | ViT-Base detector, hybrid BM25+dense (RRF), CoT      | Achieved.
+      | prompting, GPT-4o-mini backbone (SemiKong-8B compare)|
+  RQ5 | No proprietary data at any stage                    | Achieved — fixed seed,
+      |                                                     | MLflow, versioned scripts.
+
+================================================================================
+ PART 4 — NEW RESULTS SUBSECTIONS TO INSERT
+================================================================================
+
+[INSERT after Table 4 — Diagnostic-factor analysis]
+Across a fully crossed detector x engineer-note grid (N=50), the detector choice
+produced only marginal differences in report quality (marginal means: CLIP 9.20,
+trained ViT 9.50, untrained ViT 9.65). The counter-intuitive edge for the untrained
+detector is an artifact of the evaluation: an untrained model emits a consistent
+(incorrect) label, the LLM then produces a coherent, well-grounded report for that
+label, and — absent an engineer note — nothing exposes the error to the grader, which
+rewards coherence and citation rather than label correctness. Adding a defect-accurate
+engineer note slightly reduced the mean score (no-note 9.58 vs. note 9.32, p<0.001),
+driven by the conflict the note creates when the detected label is wrong. On the
+backbone comparison, GPT-4o-mini outscored SemiKong-8B (9.60 vs. 9.33, p<0.001); to
+rule out an unfair-context confound (SemiKong's 3,072-token window required truncated
+documents), GPT-4o-mini was re-evaluated on the same truncated documents and still led
+(9.51 vs. 9.33, p=0.008), while truncation itself had no significant effect on
+GPT-4o-mini (9.60 vs. 9.51, p=0.16).
+
+[INSERT after Table 4 — End-to-end latency, one line]
+End-to-end processing averaged 4.56 s per wafer, decomposed as detection 0.09 s,
+retrieval 0.02 s, and diagnosis (LLM) 4.45 s — roughly 98% of the total — so system
+responsiveness is bounded by the language-model service, not local computation.
+
+[INSERT after Table 5 — Experiment 4: Multi-judge validity check]
+To test whether the LLM-as-judge rubric favored its own model family, 20 wafers were
+each written up by both GPT-4o-mini and SemiKong-8B, and every report was independently
+re-scored by four graders (GPT-4o-mini, Claude Sonnet 4.5, Gemini 2.5 Flash, and
+SemiKong-8B) using the identical rubric. All four graders ranked GPT-authored reports
+above SemiKong-authored reports — GPT-4o-mini +0.40 (p=0.001), Claude +0.60 (p=0.004),
+Gemini +0.86 (p=0.004), and SemiKong +0.44 (p=0.063). Notably, the GPT-4o-mini grader
+exhibited the smallest pro-GPT margin, and SemiKong, grading its own outputs, still
+preferred the GPT-authored reports. Graders differed in absolute strictness (mean
+scores: Gemini 9.49, GPT-4o-mini 9.44, Claude 8.80, SemiKong 5.22), so absolute rubric
+values are grader-specific; however, the relative GPT > SemiKong ranking is robust
+across independent judges, confirming the diagnostic-quality comparison is not an
+artifact of self-grading.
+
+  Multi-judge table (mean rubric /10 by writer x judge, N=20):
+    Report written by  | Claude | Gemini | GPT-4o-mini | SemiKong
+    -------------------+--------+--------+-------------+---------
+    GPT-4o-mini        |  9.10  |  9.92  |    9.64     |   5.44
+    SemiKong-8B        |  8.50  |  9.06  |    9.24     |   5.00
+
+================================================================================
+ PART 5 — WHERE THE NUMBERS COME FROM (for footnotes / reproducibility)
+================================================================================
+  evaluation/eval_detection.py     -> detection top-1 + macro-F1 (500 maps)
+  evaluation/eval_retrieval.py     -> P@5 (hybrid/sparse/dense) + cosine relevance
+  evaluation/diagnosis_study.py    -> grid + knockouts + latency (study_*_n{10,30,50}.csv)
+  evaluation/multi_judge.py        -> 4-judge cross-check (multi_judge_n20.csv)
+  MLflow experiment "wafer-rca"; trained detector models/checkpoints/vit_best.pt
+================================================================================

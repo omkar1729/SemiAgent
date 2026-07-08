@@ -1,0 +1,17 @@
+image_index,true_defect,writer,judge,overall,causal_correctness,evidence_grounding,technical_accuracy,completeness,actionability
+12176,Center,gpt,gpt-4o-mini,9.2,5,5,5,3,5
+12176,Center,gpt,claude,9.6,5,5,5,4,5
+12176,Center,gpt,gemini,10.0,5,5,5,5,5
+12176,Center,gpt,semikong,5.6,3,3,3,2,3
+12176,Center,semikong,gpt-4o-mini,9.2,5,5,5,3,5
+12176,Center,semikong,claude,8.8,5,5,5,4,3
+12176,Center,semikong,gemini,9.2,5,5,5,5,3
+12176,Center,semikong,semikong,4.8,2,3,2,2,3
+24449,Donut,gpt,gpt-4o-mini,10.0,5,5,5,5,5
+24449,Donut,gpt,claude,8.8,5,5,5,3,4
+24449,Donut,gpt,gemini,10.0,5,5,5,5,5
+24449,Donut,gpt,semikong,5.2,3,2,3,2,3
+24449,Donut,semikong,gpt-4o-mini,10.0,5,5,5,5,5
+24449,Donut,semikong,claude,8.8,5,5,5,3,4
+24449,Donut,semikong,gemini,8.4,5,3,5,5,3
+24449,Donut,semikong,semikong,5.2,2,3,3,2,3

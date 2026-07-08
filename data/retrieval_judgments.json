@@ -1,0 +1,74 @@
+[
+  {
+    "defect_type": "Center",
+    "query": "Center wafer defect circular cluster at center process root cause",
+    "relevant_ids": [
+      "seed_center_001",
+      "seed_center_002",
+      "seed_center_003"
+    ]
+  },
+  {
+    "defect_type": "Donut",
+    "query": "Donut wafer defect ring shaped pattern around center process cause",
+    "relevant_ids": [
+      "seed_donut_001",
+      "seed_donut_002",
+      "seed_donut_003"
+    ]
+  },
+  {
+    "defect_type": "Edge-Loc",
+    "query": "Edge-Loc wafer defect localized along one edge process cause",
+    "relevant_ids": [
+      "seed_edgeloc_001",
+      "seed_edgeloc_002",
+      "seed_edgeloc_003"
+    ]
+  },
+  {
+    "defect_type": "Edge-Ring",
+    "query": "Edge-Ring wafer defect full ring outer edge process cause",
+    "relevant_ids": [
+      "seed_edgering_001",
+      "seed_edgering_002",
+      "seed_edgering_003"
+    ]
+  },
+  {
+    "defect_type": "Local",
+    "query": "Local wafer defect small localized cluster one region process cause",
+    "relevant_ids": [
+      "seed_local_001",
+      "seed_local_002",
+      "seed_local_003"
+    ]
+  },
+  {
+    "defect_type": "Near-Full",
+    "query": "Near-Full wafer defect covering entire wafer process cause",
+    "relevant_ids": [
+      "seed_nearfull_001",
+      "seed_nearfull_002",
+      "seed_nearfull_003"
+    ]
+  },
+  {
+    "defect_type": "Random",
+    "query": "Random wafer defect scattered particles across wafer process cause",
+    "relevant_ids": [
+      "seed_random_001",
+      "seed_random_002",
+      "seed_random_003"
+    ]
+  },
+  {
+    "defect_type": "Scratch",
+    "query": "Scratch wafer defect linear scratch line process cause",
+    "relevant_ids": [
+      "seed_scratch_001",
+      "seed_scratch_002",
+      "seed_scratch_003"
+    ]
+  }
+]

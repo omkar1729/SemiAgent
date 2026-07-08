@@ -1,0 +1,7 @@
+detector,note,mean_score,std_score
+CLIP,nonote,9.2,0.0
+CLIP,note,9.2,0.3577708763999663
+ViT_untrained,nonote,10.0,0.0
+ViT_untrained,note,9.639999999999999,0.3773592452822645
+ViT_trained,nonote,9.52,0.39191835884530885
+ViT_trained,note,9.36,0.48000000000000004
