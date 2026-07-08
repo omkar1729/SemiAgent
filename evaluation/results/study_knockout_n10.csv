@@ -1,0 +1,8 @@
+condition,label,mean_score,std_score,mean_diag_latency_ms,p_value_vs_B0
+grid|ViT_trained|nonote,B0 (ViT_trained · nonote · hybrid · GPT),9.52,0.39191835884530885,4606.019639968872,
+knock|sparse,B0 + sparse-only retrieval,9.040000000000001,0.6974238309665076,4798.771100002341,0.28125
+knock|noretr,B0 + no retrieval,7.5200000000000005,0.7547184905645284,5149.679909995757,0.001953125
+knock|oracle,B0 + oracle detection,9.52,0.39191835884530885,4827.214949950576,1.0
+knock|template,B0 + template diagnosis (no LLM),7.360000000000001,1.076289923765897,0.013479986228048801,0.001953125
+knock|gpt_trunc,B0 + GPT on truncated docs,9.52,0.39191835884530885,4998.622769978829,1.0
+llm|semikong,B0 with SemiKong (truncated docs),9.28,0.24000000000000019,5423.869300005026,0.25

@@ -1,0 +1,16 @@
+.env
+venv/
+__pycache__/
+*.pyc
+models/checkpoints/
+data/processed/
+knowledge_base/chroma_db/
+mlflow_runs/
+*.pt
+*.pkl
+kaggle.json
+scratch_*
+*.log
+
+# stale sqlite / tracking dbs (mlflow uses the mlflow_runs/ file-store, not a .db)
+*.db

@@ -1,0 +1,313 @@
+================================================================================
+ SemiAgent — Automated Wafer Defect Root Cause Analysis
+ EXPERIMENT REPORT (in plain language)
+================================================================================
+
+A few terms used throughout (kept simple):
+  - Wafer bin map : a grid picture of a silicon wafer where each cell is a good or
+                    failing chip. The PATTERN of failing cells (a ring, a center
+                    blob, a scratch...) hints at what went wrong in the factory.
+  - Defect type   : the name of that failure pattern (Center, Donut, Edge-Loc,
+                    Edge-Ring, Local, Near-Full, Random, Scratch, or a mix).
+  - "Detection"   : look at the wafer picture and name the defect pattern.
+  - "Retrieval"   : pull up the most relevant technical documents (like a librarian).
+  - "Diagnosis"   : write the root-cause explanation, grounded in those documents.
+  - Accuracy      : how often the top guess is exactly correct (1.0 = 100%).
+  - Macro-F1      : an accuracy-like score that treats every defect class equally,
+                    so a model can't look good just by nailing the common classes.
+  - p-value       : a statistics check of whether a difference is real or just luck.
+                    Smaller = more trustworthy. Below 0.05 = "probably a real effect".
+
+--------------------------------------------------------------------------------
+1. WHAT THE SYSTEM DOES
+--------------------------------------------------------------------------------
+Given a wafer picture (and optionally a short note from an engineer), the system
+produces a structured "why did this fail" report in three steps run one after another:
+
+  STEP 1 - Detection : an AI looks at the wafer picture and names the defect pattern.
+  STEP 2 - Retrieval : the system searches a library of ~1,000 technical documents
+                       and pulls the 5 most relevant ones for that defect.
+  STEP 3 - Diagnosis : a large language model reads those documents plus the
+                       engineer's note and writes the report: a summary, 2-3 ranked
+                       likely causes (each citing a document), and the measurements
+                       an engineer should take to confirm.
+
+--------------------------------------------------------------------------------
+2. SETUP (so the results can be reproduced)
+--------------------------------------------------------------------------------
+- Computer: Windows PC, 12 CPU cores, one NVIDIA RTX 2060 graphics card (6 GB).
+- All random choices are fixed to a fixed "seed" (42) so re-running gives the same
+  result.
+- Every experiment's numbers are recorded automatically in MLflow (a tracking tool)
+  and saved as spreadsheet (CSV) files under evaluation/results/.
+
+--------------------------------------------------------------------------------
+3. THE DATA
+--------------------------------------------------------------------------------
+- We use MixedWM38: 38,015 wafer pictures, each 52x52 cells.
+- 38 possible labels: "Normal" (no defect), 8 single defect patterns, and 29
+  combinations of those 8.
+- The raw file stores, for each wafer, an 8-slot checklist of which BASIC defect
+  types are present (cell values 0=outside the wafer, 1=good chip, 2=failing chip).
+  We turn that checklist into the proper 38-way label. The slot order is the dataset
+  authors' OFFICIAL mapping (Junliangwangdhu/WaferMap), double-checked against the
+  dataset's documented row ranges:
+     slot 0=Center 1=Donut 2=Edge-Loc 3=Edge-Ring 4=Local 5=Near-Full 6=Scratch 7=Random
+  ("Random" only ever appears on its own; "Scratch" appears in 18 of the 38 patterns.)
+- Split 70/15/15, balanced by defect type: train 26,610 / validation 5,702 /
+  test 5,703 (the test set is held back and used ONLY for final scoring).
+
+--------------------------------------------------------------------------------
+4. THE DOCUMENT LIBRARY (used for retrieval)
+--------------------------------------------------------------------------------
+~1,000 short technical documents, from three sources:
+  - 776 research-paper summaries (from arXiv)
+  - 200 patent texts about semiconductor manufacturing (via Google Patents)
+  -  24 hand-authored seed reference notes (3 for each of the 8 defect types) - written
+        within the project (synthetic), not externally expert-validated. They also
+        serve as the "relevant" set when we test the search.
+Search method ("hybrid"): combine keyword search (BM25) and meaning search (dense
+embeddings) and merge them with Reciprocal Rank Fusion.
+
+================================================================================
+ EXPERIMENT 1 - CAN IT NAME THE DEFECT? (Detection)
+================================================================================
+What we tested: how often the system names the correct defect pattern, on 500
+unseen test pictures, comparing three detectors on the SAME pictures.
+
+  CLIP, off the shelf : a general image AI used as-is (NO wafer training). We hand it
+                        the 38 defect descriptions as text and it matches each picture
+                        to the closest description.
+  ViT, untrained      : our image model with a fresh, random final layer (control).
+  ViT, trained by us  : the same model after training on the 26,610 training wafers.
+
+We report two scores: top-1 accuracy and macro-F1 (equal weight to every class).
+
+RESULTS (500 test pictures):
+  Detector              top-1 accuracy    macro-F1
+  CLIP, off the shelf       0.050           0.008   - fails; wafer maps are nothing
+                                                      like the photos CLIP was built
+                                                      for, so it collapses onto one class
+  ViT, untrained            0.044           0.008   - chance level, as expected
+  ViT, trained by us        0.984           0.982   - 100% on every single-defect type
+
+Training detail: the trained ViT (a ViT-Base model) learned over 10 passes;
+validation accuracy rose 95.1 -> 97.3 -> 97.3 -> 98.0 -> 98.1 -> 98.3 -> 98.5 ->
+98.7 -> 98.7 -> 98.8%. Bottom line: training our own detector took it from ~5% to 98%.
+Its 0.982 macro-F1 is an apples-to-apples match to the published WaferSegClassNet
+benchmark (98.2%).
+
+================================================================================
+ EXPERIMENT 2 - CAN IT FIND THE RIGHT DOCUMENTS? (Retrieval)
+================================================================================
+What we tested: when asked about a defect, does the search return relevant documents?
+We measured two ways, over the 8 defect-type questions:
+  - Precision@5: how many of the top-5 returned docs are truly on-topic (needs the
+    24 seed reference notes as the "relevant" set).
+  - Retrieval relevance (cosine similarity): how semantically close the top-5 docs
+    are to the question, 0-1 (this is the thesis's stated retrieval metric).
+
+RESULTS:
+  Precision@5 (average over 8 questions):
+     Keyword-only (sparse)  0.525   <- best
+     Meaning-only (dense)   0.475
+     Hybrid (both merged)   0.450
+  Retrieval relevance (mean cosine similarity of hybrid top-5 to the question): 0.671
+
+What it means: about half of the top-5 are spot-on (P@5 ~0.5), and the retrieved docs
+are moderately on-topic by cosine similarity (0.67). Both are below the optimistic
+targets (P@5 ~0.85 / cosine >0.85): our defects describe similar things (e.g. "Donut"
+and "Edge-Ring" are both rings), so the search mixes them up, and on this small judged
+set the plain keyword search slightly beats the hybrid. For writing the diagnosis this
+is fine - the AI still gets 2-3 strongly relevant documents plus related context.
+(Caveat: the seed notes are both IN the corpus AND the relevance ground truth, so this
+P@5 measures recovery of planted relevant docs rather than independent human judgment.)
+
+================================================================================
+ EXPERIMENT 3 - HOW GOOD IS THE WRITTEN DIAGNOSIS, AND WHAT DRIVES IT?
+================================================================================
+One experiment, scored on the same pictures in a single pass, replacing the three
+separate diagnosis/ablation tests from the earlier version (no duplicated work).
+
+How we measured: an AI "grader" (GPT-4o-mini) scores each report 1 (poor) to 5
+(excellent) on five qualities, averaged and put on a 0-10 scale:
+   1. Correct cause   2. Backed by evidence   3. Technically correct
+   4. Thorough        5. Actionable
+We ran it on a balanced sample at three sizes (10, 30, 50 - each a subset of the next).
+
+A) THE FULL SYSTEM'S QUALITY (N=50)
+   Full system "B0" = trained ViT detector + no engineer note + hybrid search +
+   GPT-4o-mini writer. Average score: 9.60 out of 10.
+   By quality: Correct cause 5.0 | Backed by evidence 5.0 | Technically correct 5.0 |
+               Actionable 5.0 | Thorough 4.0 (the weakest - reports sometimes give
+               fewer distinct causes).
+
+B) DOES THE CHOICE OF DETECTOR / NOTE MATTER? (a 3 x 2 grid, score /10, N=50)
+                         no note    with note
+     CLIP detector         9.24       9.15
+     trained ViT (=B0)     9.60       9.39
+     untrained ViT         9.89       9.42
+   - The detector barely changes the written report's score. Surprisingly the
+     UNTRAINED detector scores highest with no note (9.89). This is a quirk, not a
+     real win: the untrained model keeps guessing the same (wrong) defect, the AI then
+     writes a coherent, well-grounded report for that guess, and with no note nothing
+     reveals the mistake - so the grader (which rewards coherence and citations, not
+     whether the defect NAME was right) scores it high. A correct note then CONTRADICTS
+     the wrong guess and the score falls to 9.42.
+   - The engineer note slightly LOWERED the score on average (no-note 9.58 vs note
+     9.32; p<0.001), driven by that conflict; with the correct (trained) detector the
+     note is roughly neutral.
+
+C) WHICH PART OF THE PIPELINE MATTERS MOST? (knock-out test, vs B0)
+   Change ONE thing from the full system and re-score, at three sample sizes (each a
+   subset of the next). Scores are out of 10:
+
+     Setup (what changed)                   N=10    N=30    N=50
+     Full system (B0)                        9.52    9.57    9.60
+     Use perfect (oracle) detection          9.52    9.55    9.57
+     GPT given short (truncated) docs         9.52    9.52    9.51
+     Weaken search to keyword-only           9.04    9.09    9.22
+     Swap writer to SemiKong-8B              9.28    9.33    9.33
+     Remove document search (keep the LLM)   7.52    7.79    7.84
+     Replace the LLM with a fixed template   7.36    7.56    7.52
+
+   Is the change real? (Wilcoxon p vs B0, at N=10 / N=30 / N=50)
+     oracle detection      1.00  / 0.74    / 0.59     -> never significant
+     GPT truncated docs    1.00  / 0.48    / 0.16     -> never significant
+     keyword-only search   0.28  / 0.009   / 0.007    -> real from N=30
+     SemiKong writer       0.25  / 0.020   / <0.001   -> real from N=30
+     no document search    0.002 / <0.001  / <0.001   -> always real
+     template (no LLM)     0.002 / <0.001  / <0.001   -> always real
+
+   What it means:
+   - The TWO things that matter most are the LLM writer and the document search, at
+     every sample size. Replacing the LLM with a no-reasoning template drops the score
+     the most (to ~7.4-7.5), and removing the document search is almost as damaging
+     (to ~7.5-7.8). Both are large and significant at all N. So report quality rests on
+     BOTH the language model's reasoning AND the retrieved documents.
+   - PERFECT detection barely helps (9.60 -> 9.57, never significant): detector accuracy
+     is not what drives the written report's quality.
+   - The SMALL effects (keyword-only search, SemiKong writer) only reach significance
+     from N=30 onward; their non-significance at N=10 is a sample-size (power) artifact,
+     not absence of an effect - the direction is consistent across all three sizes.
+
+D) IS THE SPECIALISED MODEL BETTER, AND WAS THE EARLIER COMPARISON FAIR? (N=50)
+   SemiKong-8B (a semiconductor-specialised model) has a smaller memory for input
+   text, so earlier it was given shorter document snippets than GPT-4o-mini - an
+   unfair handicap. So we re-ran GPT-4o-mini on the SAME shortened documents:
+     GPT-4o-mini, full docs (B0)        9.60
+     GPT-4o-mini, shortened docs        9.51   (shortening barely hurt GPT; p=0.16)
+     SemiKong-8B, shortened docs        9.33
+   Fair comparison on identical shortened docs: GPT-4o-mini 9.51 vs SemiKong 9.33,
+   p=0.008 -> GPT-4o-mini is genuinely better, NOT just because it got longer docs.
+   (One caveat remained - the grader is itself GPT-4o-mini - which Experiment 4 resolves.)
+
+E) HOW FAST IS IT? (end-to-end latency, N=50)
+   Average time to process one wafer end-to-end: 4,557 ms (~4.6 seconds), split as
+     detection 88 ms  +  retrieval 18 ms  +  diagnosis (LLM) 4,451 ms.
+   So ~98% of the time is the language model writing the report over the internet; the
+   image and search steps are negligible. A faster GPU would not help; only a faster /
+   higher-throughput LLM service would.
+
+ARE THE DETECTOR/NOTE DIFFERENCES REAL? (statistics, N=50)
+   CLIP vs trained ViT        p<0.001   ViT_untrained vs trained  p=0.012
+   CLIP vs untrained ViT      p<0.001   note vs no-note           p<0.001
+   All these gaps are tiny in size (every setup scores 9.1-9.9 out of 10); the only
+   LARGE, decision-changing effects are removing the LLM or the document search.
+
+================================================================================
+ EXPERIMENT 4 - IS THE AI GRADER ITSELF BIASED? (Multi-judge cross-check)
+================================================================================
+A fair worry: in Experiment 3 the grader was GPT-4o-mini, the SAME model that writes
+the "full system" reports - so it might simply favour its own writing style when we
+compare it to SemiKong. To test this, we re-graded the SAME reports with FOUR
+different graders and checked whether they agree.
+
+Setup: 20 wafers, each written up twice (once by GPT-4o-mini, once by SemiKong-8B),
+then every report scored by four graders using the identical rubric:
+  GPT-4o-mini (the original grader), Claude (Sonnet 4.5), Gemini (2.5 Flash), and
+  SemiKong-8B itself.
+
+RESULT - average score (out of 10) each grader gave to each writer's reports:
+  Report written by    Claude   Gemini   GPT-4o-mini   SemiKong
+  GPT-4o-mini           9.10     9.92        9.64         5.44
+  SemiKong-8B           8.50     9.06        9.24         5.00
+
+Does each grader rank GPT-4o-mini's reports above SemiKong's? (gap, and is it real?)
+  Grader         GPT minus SemiKong    Real difference?
+  GPT-4o-mini         +0.40            YES (p=0.001)
+  Claude              +0.60            YES (p=0.004)
+  Gemini              +0.86            YES (p=0.004)
+  SemiKong            +0.44            almost (p=0.063)
+
+What it means:
+  - ALL FOUR graders - including two completely independent ones (Claude, Gemini) and
+    even SemiKong grading itself - rank GPT-4o-mini's reports above SemiKong's. So the
+    "GPT-4o-mini writes better diagnoses than SemiKong-8B" finding (Experiment 3) is
+    NOT an artifact of GPT grading its own work.
+  - In fact the GPT grader gives the SMALLEST pro-GPT gap (+0.40); Claude (+0.60) and
+    Gemini (+0.86) favour GPT even more. If anything the GPT grader was conservative,
+    not self-flattering.
+  - Even SemiKong, grading itself, still prefers the GPT-written reports.
+
+Two caveats about the graders themselves:
+  - They differ in strictness: Gemini (9.49) and GPT-4o-mini (9.44) are lenient,
+    Claude (8.80) a little stricter, and SemiKong-8B is MUCH harsher (5.22 average) -
+    it reads the rubric very strictly. So the absolute "9.6 out of 10" is grader-
+    specific; only the RELATIVE ranking (GPT > SemiKong) travels across graders.
+  - The three big graders agree moderately with each other (rank correlation ~0.3-0.5);
+    SemiKong-8B is an outlier (weak correlation, ~4 points lower scale), i.e. not a
+    reliable grader on its own - we include it only as a fourth independent vote.
+
+--------------------------------------------------------------------------------
+5. SPEED NOTES
+--------------------------------------------------------------------------------
+- Training the detector ran on the graphics card: 10 passes over 26,610 pictures in
+  roughly 1.5 hours.
+- The diagnosis experiment is limited by the LLM service's 200,000 words-per-minute
+  ("tokens per minute") cap, not the local machine. We made grading ~3x cheaper by
+  asking the grader for all five scores in ONE request instead of five, which keeps us
+  under that cap. The 50-picture study then runs in ~25 minutes.
+
+--------------------------------------------------------------------------------
+6. MAIN TAKEAWAYS
+--------------------------------------------------------------------------------
+1. Our trained detector reads wafers very well: 98% correct / 0.982 macro-F1 on unseen
+   test pictures (100% on each single-defect type), versus ~5% (0.008 F1) off the shelf.
+2. The written report's quality rests on TWO components: the LLM's reasoning and the
+   retrieved documents. Removing either is the biggest, most reliable drop (to ~7.5-7.9
+   out of 10) at every sample size; a no-LLM template is the single largest drop.
+3. The detector's accuracy and the engineer's note do NOT meaningfully improve the
+   report's quality score - the LLM + documents carry it. (The grader rewards a
+   coherent, well-cited report even when the defect name handed to it is wrong.)
+4. GPT-4o-mini beats the specialised SemiKong-8B even on identical (shortened)
+   documents (9.51 vs 9.33, p=0.008) - a real model-quality gap, not an input handicap.
+   This is confirmed by four independent graders (Experiment 4), so it is not an
+   artifact of GPT grading its own work.
+5. End-to-end latency is ~4.6 s/wafer, ~98% of it the LLM call.
+6. Overall report quality is high (full system ~9.6 out of 10).
+
+--------------------------------------------------------------------------------
+7. KNOWN LIMITATIONS (honest caveats)
+--------------------------------------------------------------------------------
+- Quality grading is by an LLM rubric, not human domain experts. The risk of the
+  grader favouring its own family was tested directly (Experiment 4): four graders
+  agree on the GPT>SemiKong ranking, so that specific concern is addressed - but
+  human expert review remains future work and absolute scores are grader-specific.
+- The diagnosis study covers the 8 single-defect classes (not the 29 mixed classes)
+  and small picture sets (10-50), so treat its small effects as early signals; the
+  largest effects (LLM and document-search removal) are the ones to trust most.
+- Retrieval relevance fell short of the >85% target (cosine 0.671, P@5 ~0.5), and the
+  retrieval ground truth (seed notes) is not independent human judgment.
+- Detection (500 pictures) and search (8 questions) numbers are on larger sets.
+
+--------------------------------------------------------------------------------
+8. WHERE THE NUMBERS ARE SAVED
+--------------------------------------------------------------------------------
+- MLflow (experiment "wafer-rca"): one run per experiment/size, including latency and
+  all paired p-values.
+- Spreadsheets (evaluation/results/): study_grid_n{10,30,50}.csv,
+  study_knockout_n{10,30,50}.csv, study_per_image_n{10,30,50}.csv, and the multi-judge
+  cross-check multi_judge_n20.csv.
+- Trained detector: models/checkpoints/vit_best.pt.
+================================================================================
