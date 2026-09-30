@@ -232,3 +232,19 @@ api/main.py               FastAPI service
 ui/app.py                 Streamlit UI
 notebooks/demo.ipynb      end-to-end walkthrough
 ```
+
+---
+
+## Citation
+
+If you use SemiAgent in your work, please cite it (GitHub's **"Cite this repository"** button reads `CITATION.cff`):
+
+```bibtex
+@software{muglikar_semiagent_2026,
+  author  = {Muglikar, Omkar},
+  title   = {SemiAgent: Multi-Agent Root Cause Analysis for Wafer Defects},
+  year    = {2026},
+  url     = {https://github.com/omkar1729/SemiAgent},
+  license = {MIT}
+}
+```

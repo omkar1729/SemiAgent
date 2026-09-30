@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "SemiAgent: Multi-Agent Root Cause Analysis for Wafer Defects"
+type: software
+authors:
+  - family-names: Muglikar
+    given-names: Omkar
+repository-code: "https://github.com/omkar1729/SemiAgent"
+license: MIT
+date-released: 2026-09-29
+keywords:
+  - semiconductor
+  - wafer defect
+  - root cause analysis
+  - multi-agent
+  - LLM
